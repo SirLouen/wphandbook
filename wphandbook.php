@@ -128,7 +128,7 @@ class WordPressPublisher
                 'parent' => $parentId,
                 'menu_order' => $order,
                 'status' => 'publish' // Ensure the page is published
-            ], 'PATCH'); // Use PATCH for updates
+            ], 'POST'); // Use POST for updates
             echo "Page updated: " . ($response['link'] ?? 'No link provided') . "\n";
         } else {
             echo "Creating new page with slug: {$slug}\n";
@@ -143,6 +143,9 @@ class WordPressPublisher
             echo "Page created: " . ($response['link'] ?? 'No link provided') . "\n";
         }
 
+        // Update slug to ID map
+        $this->slugToIdMap[$slug] = $response['id'] ?? null;
+
         return $response;
     }
 
@@ -151,25 +154,25 @@ class WordPressPublisher
      *
      * @param string $endpoint The API endpoint to send the request to.
      * @param array $data The data to send in the request.
-     * @param string $method The HTTP method to use ('POST' or 'PATCH').
+     * @param string $method The HTTP method to use ('GET' or 'POST').
      * @return array The response from the WordPress API.
      * @throws Exception If the CURL request fails or returns an error response.
      */
-    private function sendRequest(string $endpoint, array $data, string $method = 'POST'): array
+    private function sendRequest(string $endpoint, array $data = [], string $method = 'GET'): array
     {
         $url = $this->wpApiUrl . $endpoint;
         echo "Sending request to WordPress API: {$url}\n";
 
         $ch = curl_init($url);
         $headers = [
-            'Content-Type: application/json'
+            'Content-Type: application/json',
+            'Authorization: Basic ' . base64_encode("{$this->username}:{$this->applicationPassword}")
         ];
 
         $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_USERPWD => "{$this->username}:{$this->applicationPassword}",
             CURLOPT_TIMEOUT => 30,
             CURLOPT_SSL_VERIFYPEER => true
         ];
@@ -217,7 +220,7 @@ class WordPressPublisher
         }
 
         // Query the API for the page
-        $endpoint = "pages?slug={$slug}&per_page=1";
+        $endpoint = "pages?slug={$slug}&per_page=1&status=any";
         echo "Searching for existing page with slug: {$slug}\n";
         $response = $this->sendRequest($endpoint, [], 'GET');
 
