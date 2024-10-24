@@ -1,0 +1,12 @@
+[
+  {
+    "content_id": 123,
+    "file_url": "https://github.com/WPES/spain-handbook/blob/master/index.md",
+    "endpoint": "posts"
+  },
+  {
+    "content_id": 456,
+    "file_url": "https://github.com/WPES/spain-handbook/blob/master/another-page.md",
+    "endpoint": "pages"
+  }
+]
