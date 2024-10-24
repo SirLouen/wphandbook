@@ -1,12 +1,12 @@
 [
   {
-    "content_id": 123,
-    "file_url": "https://github.com/WPES/spain-handbook/blob/master/index.md",
+    "content_id": 100,
+    "file_url": "https://raw.githubusercontent.com/javiercasares/wphandbook/refs/heads/main/example/el-quijote-1.md",
     "endpoint": "posts"
   },
   {
-    "content_id": 456,
-    "file_url": "https://github.com/WPES/spain-handbook/blob/master/another-page.md",
+    "content_id": 101,
+    "file_url": "https://raw.githubusercontent.com/javiercasares/wphandbook/refs/heads/main/example/wordpress-markdown.md",
     "endpoint": "pages"
   }
 ]
