@@ -1,19 +1,22 @@
 <?php
 declare(strict_types=1);
 
+namespace WPHandbook;
+
 // Ensure you have the Parsedown library installed via Composer:
 // composer require erusev/parsedown
 
 require 'vendor/autoload.php';
 
 use Parsedown;
+use Exception;
 
 /**
- * Class WPHandbookMarkdownConverter
+ * Class MarkdownConverter
  * 
  * Converts Markdown content to HTML using the Parsedown library.
  */
-class WPHandbookMarkdownConverter
+class MarkdownConverter
 {
     private Parsedown $parsedown;
 
@@ -22,7 +25,7 @@ class WPHandbookMarkdownConverter
      */
     public function __construct()
     {
-        echo "Initializing WPHandbookMarkdownConverter...\n";
+        echo "Initializing MarkdownConverter...\n";
         $this->parsedown = new Parsedown();
     }
 
@@ -32,7 +35,7 @@ class WPHandbookMarkdownConverter
      * @param string $markdownContent The Markdown content to convert.
      * @return string The converted HTML content.
      */
-    public function WPHandbookConvertMarkdownToHTML(string $markdownContent): string
+    public function convertMarkdownToHTML(string $markdownContent): string
     {
         echo "Converting Markdown to HTML...\n";
         return $this->parsedown->text($markdownContent);
@@ -44,7 +47,7 @@ class WPHandbookMarkdownConverter
      * @param string $markdownContent The Markdown content to split.
      * @return array{title: string, content: string} An associative array with 'title' and 'content'.
      */
-    public function WPHandbookSplitTitleAndContent(string $markdownContent): array
+    public function splitTitleAndContent(string $markdownContent): array
     {
         echo "Splitting title and content from Markdown...\n";
         $lines = explode("\n", $markdownContent);
@@ -54,19 +57,19 @@ class WPHandbookMarkdownConverter
 
         return [
             'title' => $title,
-            'content' => $this->WPHandbookConvertMarkdownToHTML($content)
+            'content' => $this->convertMarkdownToHTML($content)
         ];
     }
 }
 
 /**
- * Class WPHandbookWordPressPublisher
+ * Class WordPressPublisher
  * 
  * Publishes Markdown content to a WordPress site using the REST API.
  */
-class WPHandbookWordPressPublisher
+class WordPressPublisher
 {
-    private WPHandbookMarkdownConverter $converter;
+    private MarkdownConverter $converter;
     private string $wpApiUrl;
     private string $username;
     private string $applicationPassword;
@@ -81,8 +84,8 @@ class WPHandbookWordPressPublisher
      */
     public function __construct(string $wpApiUrl, string $username, string $applicationPassword)
     {
-        echo "Initializing WPHandbookWordPressPublisher...\n";
-        $this->converter = new WPHandbookMarkdownConverter();
+        echo "Initializing WordPressPublisher...\n";
+        $this->converter = new MarkdownConverter();
         $this->wpApiUrl = rtrim($wpApiUrl, '/') . '/wp-json/wp/v2/';
         $this->username = $username;
         $this->applicationPassword = $applicationPassword;
@@ -99,41 +102,43 @@ class WPHandbookWordPressPublisher
      * @return array The response from the WordPress API.
      * @throws Exception If the API request fails.
      */
-    public function WPHandbookPublishContent(string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = -1): array
+    public function publishContent(string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = -1): array
     {
         echo "Publishing content with slug: {$slug}\n";
-        $data = $this->converter->WPHandbookSplitTitleAndContent($markdownContent);
+        $data = $this->converter->splitTitleAndContent($markdownContent);
 
         // Get parent ID if parentSlug is provided
         $parentId = 0;
         if ($parentSlug !== null) {
-            $parentId = $this->WPHandbookGetPageIdBySlug($parentSlug) ?? 0;
+            $parentId = $this->getPageIdBySlug($parentSlug) ?? 0;
             if ($parentId === 0) {
                 echo "Warning: Parent page with slug '{$parentSlug}' not found. Publishing without a parent.\n";
             }
         }
 
         // Check if the page already exists
-        $existingPage = $this->WPHandbookGetPageBySlug($slug);
+        $existingPage = $this->getPageBySlug($slug);
         if ($existingPage) {
             $pageId = $existingPage['id'];
             echo "Existing page found with ID: {$pageId}. Updating...\n";
-            $response = $this->WPHandbookSendRequest("{$endpoint}/{$pageId}", [
+            $response = $this->sendRequest("{$endpoint}/{$pageId}", [
                 'title' => $data['title'],
                 'content' => $data['content'],
                 'slug' => $slug,
                 'parent' => $parentId,
-                'menu_order' => $order
+                'menu_order' => $order,
+                'status' => 'publish' // Ensure the page is published
             ], 'POST');
             echo "Page updated: " . ($response['link'] ?? 'No link provided') . "\n";
         } else {
             echo "Creating new page with slug: {$slug}\n";
-            $response = $this->WPHandbookSendRequest("{$endpoint}", [
+            $response = $this->sendRequest("{$endpoint}", [
                 'title' => $data['title'],
                 'content' => $data['content'],
                 'slug' => $slug,
                 'parent' => $parentId,
-                'menu_order' => $order
+                'menu_order' => $order,
+                'status' => 'publish' // Ensure the page is published
             ], 'POST');
             echo "Page created: " . ($response['link'] ?? 'No link provided') . "\n";
         }
@@ -150,24 +155,28 @@ class WPHandbookWordPressPublisher
      * @return array The response from the WordPress API.
      * @throws Exception If the CURL request fails or returns an error response.
      */
-    private function WPHandbookSendRequest(string $endpoint, array $data, string $method = 'POST'): array
+    private function sendRequest(string $endpoint, array $data, string $method = 'POST'): array
     {
         $url = $this->wpApiUrl . $endpoint;
         echo "Sending request to WordPress API: {$url}\n";
 
         $ch = curl_init($url);
-        curl_setopt_array($ch, [
+        $headers = [
+            'Content-Type: application/json'
+        ];
+
+        $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json'
-            ],
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_USERPWD => "{$this->username}:{$this->applicationPassword}"
-        ]);
+        ];
 
         if (!empty($data)) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            $options[CURLOPT_POSTFIELDS] = json_encode($data);
         }
+
+        curl_setopt_array($ch, $options);
 
         $response = curl_exec($ch);
 
@@ -193,7 +202,7 @@ class WPHandbookWordPressPublisher
      * @param string $slug The slug of the page.
      * @return array|null The page data or null if not found.
      */
-    private function WPHandbookGetPageBySlug(string $slug): ?array
+    private function getPageBySlug(string $slug): ?array
     {
         // Check the cache first
         if (isset($this->slugToIdMap[$slug])) {
@@ -203,7 +212,7 @@ class WPHandbookWordPressPublisher
         // Query the API for the page
         $endpoint = "pages?slug={$slug}&per_page=1";
         echo "Searching for existing page with slug: {$slug}\n";
-        $response = $this->WPHandbookSendRequest($endpoint, [], 'GET');
+        $response = $this->sendRequest($endpoint, [], 'GET');
 
         if (!empty($response) && is_array($response)) {
             $page = $response[0];
@@ -220,9 +229,9 @@ class WPHandbookWordPressPublisher
      * @param string $slug The slug of the page.
      * @return int|null The page ID or null if not found.
      */
-    private function WPHandbookGetPageIdBySlug(string $slug): ?int
+    private function getPageIdBySlug(string $slug): ?int
     {
-        $page = $this->WPHandbookGetPageBySlug($slug);
+        $page = $this->getPageBySlug($slug);
         return $page['id'] ?? null;
     }
 }
@@ -275,13 +284,13 @@ try {
         }
     }
 
-    $publisher = new WPHandbookWordPressPublisher($wpApiUrl, $username, $applicationPassword);
+    $publisher = new WordPressPublisher($wpApiUrl, $username, $applicationPassword);
 
     foreach ($fileList as $key => $item) {
         $slug = $item['slug'] ?? null;
         $markdownUrl = $item['markdown'] ?? null;
         $parentSlug = $item['parent'] ?? null;
-        $order = $item['order'] ?? 0;
+        $order = $item['order'] ?? -1;
 
         // Validate that slug and markdown are present and not empty
         if (empty($slug) || empty($markdownUrl)) {
@@ -308,7 +317,7 @@ try {
         }
 
         // Publish the content if it has changed
-        $response = $publisher->WPHandbookPublishContent('pages', $markdownContent, $slug, $parentSlug, $order);
+        $response = $publisher->publishContent('pages', $markdownContent, $slug, $parentSlug, $order);
         echo "Content published with slug '{$slug}': " . ($response['link'] ?? 'No link provided') . "\n";
 
         // Update the hash data
@@ -369,3 +378,4 @@ try {
  *     }
  * }
  */
+?>
