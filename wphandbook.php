@@ -102,7 +102,7 @@ class WordPressPublisher
      * @return array The response from the WordPress API.
      * @throws Exception If the API request fails.
      */
-    public function publishContent(string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = -1): array
+    public function publishContent(string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = 0): array
     {
         echo "Publishing content with slug: {$slug}\n";
         $data = $this->converter->splitTitleAndContent($markdownContent);
@@ -297,15 +297,17 @@ try {
     $publisher = new WordPressPublisher($wpApiUrl, $username, $applicationPassword);
 
     // Sort the manifest to ensure parents are processed before children
+    /*
     uksort($fileList, function ($a, $b) {
         return substr_count($a, '/') <=> substr_count($b, '/');
     });
+    */
 
     foreach ($fileList as $key => $item) {
         $slug = $item['slug'] ?? null;
         $markdownUrl = $item['markdown'] ?? null;
         $parentSlug = $item['parent'] ?? null;
-        $order = $item['order'] ?? -1;
+        $order = $item['order'] ?? 0;
 
         // Validate that slug and markdown are present and not empty
         if (true === (empty($slug) || empty($markdownUrl))) {
