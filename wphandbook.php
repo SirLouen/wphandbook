@@ -1,120 +1,88 @@
 <?php
+declare(strict_types=1);
 
-// Make sure to have the Parsedown library installed
-// You can install it with Composer: composer require erusev/parsedown
+// Ensure you have the Parsedown library installed via Composer:
+// composer require erusev/parsedown
 
 require 'vendor/autoload.php';
 
 use Parsedown;
 
 /**
- * Class MarkdownToPHPConverter
+ * Class WPHandbookMarkdownConverter
  * 
  * Converts Markdown content to HTML using the Parsedown library.
  */
-class MarkdownToPHPConverter
+class WPHandbookMarkdownConverter
 {
-    /**
-     * @var Parsedown Parsedown instance for converting Markdown to HTML.
-     */
-    private $parsedown;
+    private Parsedown $parsedown;
 
     /**
-     * Constructor initializes the Parsedown instance.
+     * Initializes the Parsedown instance.
      */
     public function __construct()
     {
-        echo "Initializing MarkdownToPHPConverter...\n";
+        echo "Initializing WPHandbookMarkdownConverter...\n";
         $this->parsedown = new Parsedown();
     }
 
     /**
      * Converts Markdown content to HTML.
      *
-     * @param string $markdownContent The Markdown content to be converted.
+     * @param string $markdownContent The Markdown content to convert.
      * @return string The converted HTML content.
      */
-    public function convert($markdownContent)
+    public function WPHandbookConvertMarkdownToHTML(string $markdownContent): string
     {
-        echo "Converting Markdown content to HTML...\n";
+        echo "Converting Markdown to HTML...\n";
         return $this->parsedown->text($markdownContent);
     }
 
     /**
-     * Reads a Markdown file, converts its content to HTML.
+     * Splits Markdown content into a title and content.
      *
-     * @param string $filePath The path to the Markdown file.
-     * @return string The converted HTML content.
-     * @throws Exception If the specified file does not exist.
+     * @param string $markdownContent The Markdown content to split.
+     * @return array{title: string, content: string} An associative array with 'title' and 'content'.
      */
-    public function convertFile($filePath)
+    public function WPHandbookSplitTitleAndContent(string $markdownContent): array
     {
-        echo "Reading Markdown file: {$filePath}\n";
-        if (!file_exists($filePath)) {
-            throw new Exception("The specified file does not exist: " . $filePath);
-        }
-        
-        $markdownContent = file_get_contents($filePath);
-        return $this->convert($markdownContent);
-    }
-
-    /**
-     * Splits the Markdown content into a title and content.
-     *
-     * @param string $markdownContent The Markdown content to be split.
-     * @return array An associative array with 'title' and 'content' keys.
-     */
-    public function splitTitleAndContent($markdownContent)
-    {
-        echo "Splitting title and content from the Markdown file...\n";
+        echo "Splitting title and content from Markdown...\n";
         $lines = explode("\n", $markdownContent);
-        $title = array_shift($lines);
+        $titleLine = array_shift($lines);
+        $title = !empty($titleLine) ? trim($titleLine, "# ") : "Untitled";
         $content = implode("\n", $lines);
+
         return [
-            'title' => trim($title, "# "),
-            'content' => $this->convert($content)
+            'title' => $title,
+            'content' => $this->WPHandbookConvertMarkdownToHTML($content)
         ];
     }
 }
 
 /**
- * Class MarkdownToWordPressPublisher
+ * Class WPHandbookWordPressPublisher
  * 
  * Publishes Markdown content to a WordPress site using the REST API.
  */
-class MarkdownToWordPressPublisher
+class WPHandbookWordPressPublisher
 {
-    /**
-     * @var MarkdownToPHPConverter Instance of MarkdownToPHPConverter.
-     */
-    private $converter;
+    private WPHandbookMarkdownConverter $converter;
+    private string $wpApiUrl;
+    private string $username;
+    private string $applicationPassword;
+    private array $slugToIdMap = [];
 
     /**
-     * @var string Base URL for the WordPress API.
-     */
-    private $wpApiUrl;
-
-    /**
-     * @var string Username for WordPress authentication.
-     */
-    private $username;
-
-    /**
-     * @var string Application password for WordPress authentication.
-     */
-    private $applicationPassword;
-
-    /**
-     * Constructor initializes the WordPress API details and Markdown converter.
+     * Initializes the WordPress API details and Markdown converter.
      *
-     * @param string $wpApiUrl The base URL of the WordPress API.
-     * @param string $username The username for authentication.
-     * @param string $applicationPassword The application password for authentication.
+     * @param string $wpApiUrl Base URL of the WordPress API.
+     * @param string $username Username for authentication.
+     * @param string $applicationPassword Application password for authentication.
      */
-    public function __construct($wpApiUrl, $username, $applicationPassword)
+    public function __construct(string $wpApiUrl, string $username, string $applicationPassword)
     {
-        echo "Initializing MarkdownToWordPressPublisher...\n";
-        $this->converter = new MarkdownToPHPConverter();
+        echo "Initializing WPHandbookWordPressPublisher...\n";
+        $this->converter = new WPHandbookMarkdownConverter();
         $this->wpApiUrl = rtrim($wpApiUrl, '/') . '/wp-json/wp/v2/';
         $this->username = $username;
         $this->applicationPassword = $applicationPassword;
@@ -123,21 +91,52 @@ class MarkdownToWordPressPublisher
     /**
      * Publishes converted Markdown content to the specified WordPress endpoint.
      *
-     * @param string $endpoint The WordPress endpoint (e.g., posts, pages).
-     * @param int $contentId The ID of the content to be updated.
-     * @param string $markdownContent The Markdown content to be published.
+     * @param string $endpoint The WordPress endpoint (e.g., pages).
+     * @param string $markdownContent The Markdown content to publish.
+     * @param string $slug The slug for the WordPress page.
+     * @param string|null $parentSlug The slug of the parent page, if applicable.
+     * @param int $order The menu order for the page.
      * @return array The response from the WordPress API.
-     * @throws Exception If the request to the WordPress API fails.
+     * @throws Exception If the API request fails.
      */
-    public function publishContent($endpoint, $contentId, $markdownContent)
+    public function WPHandbookPublishContent(string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = -1): array
     {
-        echo "Publishing content with ID: {$contentId}\n";
-        $data = $this->converter->splitTitleAndContent($markdownContent);
+        echo "Publishing content with slug: {$slug}\n";
+        $data = $this->converter->WPHandbookSplitTitleAndContent($markdownContent);
 
-        $response = $this->sendRequest("{$endpoint}/{$contentId}", [
-            'title' => $data['title'],
-            'content' => $data['content']
-        ], 'POST');
+        // Get parent ID if parentSlug is provided
+        $parentId = 0;
+        if ($parentSlug !== null) {
+            $parentId = $this->WPHandbookGetPageIdBySlug($parentSlug) ?? 0;
+            if ($parentId === 0) {
+                echo "Warning: Parent page with slug '{$parentSlug}' not found. Publishing without a parent.\n";
+            }
+        }
+
+        // Check if the page already exists
+        $existingPage = $this->WPHandbookGetPageBySlug($slug);
+        if ($existingPage) {
+            $pageId = $existingPage['id'];
+            echo "Existing page found with ID: {$pageId}. Updating...\n";
+            $response = $this->WPHandbookSendRequest("{$endpoint}/{$pageId}", [
+                'title' => $data['title'],
+                'content' => $data['content'],
+                'slug' => $slug,
+                'parent' => $parentId,
+                'menu_order' => $order
+            ], 'POST');
+            echo "Page updated: " . ($response['link'] ?? 'No link provided') . "\n";
+        } else {
+            echo "Creating new page with slug: {$slug}\n";
+            $response = $this->WPHandbookSendRequest("{$endpoint}", [
+                'title' => $data['title'],
+                'content' => $data['content'],
+                'slug' => $slug,
+                'parent' => $parentId,
+                'menu_order' => $order
+            ], 'POST');
+            echo "Page created: " . ($response['link'] ?? 'No link provided') . "\n";
+        }
 
         return $response;
     }
@@ -151,20 +150,24 @@ class MarkdownToWordPressPublisher
      * @return array The response from the WordPress API.
      * @throws Exception If the CURL request fails or returns an error response.
      */
-    private function sendRequest($endpoint, $data, $method = 'POST')
+    private function WPHandbookSendRequest(string $endpoint, array $data, string $method = 'POST'): array
     {
         $url = $this->wpApiUrl . $endpoint;
         echo "Sending request to WordPress API: {$url}\n";
 
         $ch = curl_init($url);
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json'
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json'
+            ],
+            CURLOPT_USERPWD => "{$this->username}:{$this->applicationPassword}"
         ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_USERPWD, $this->username . ':' . $this->applicationPassword);
+
+        if (!empty($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        }
 
         $response = curl_exec($ch);
 
@@ -181,65 +184,117 @@ class MarkdownToWordPressPublisher
         curl_close($ch);
 
         echo "Request successful.\n";
-        return json_decode($response, true);
+        return json_decode($response, true) ?? [];
+    }
+
+    /**
+     * Retrieves a WordPress page by its slug.
+     *
+     * @param string $slug The slug of the page.
+     * @return array|null The page data or null if not found.
+     */
+    private function WPHandbookGetPageBySlug(string $slug): ?array
+    {
+        // Check the cache first
+        if (isset($this->slugToIdMap[$slug])) {
+            return ['id' => $this->slugToIdMap[$slug]];
+        }
+
+        // Query the API for the page
+        $endpoint = "pages?slug={$slug}&per_page=1";
+        echo "Searching for existing page with slug: {$slug}\n";
+        $response = $this->WPHandbookSendRequest($endpoint, [], 'GET');
+
+        if (!empty($response) && is_array($response)) {
+            $page = $response[0];
+            $this->slugToIdMap[$slug] = $page['id'];
+            return $page;
+        }
+
+        return null;
+    }
+
+    /**
+     * Retrieves the ID of a WordPress page by its slug.
+     *
+     * @param string $slug The slug of the page.
+     * @return int|null The page ID or null if not found.
+     */
+    private function WPHandbookGetPageIdBySlug(string $slug): ?int
+    {
+        $page = $this->WPHandbookGetPageBySlug($slug);
+        return $page['id'] ?? null;
     }
 }
 
-// Example usage
+// Example Usage
 try {
     echo "Starting the publishing process...\n";
-    // Load configuration from external JSON file
+
+    // Load configuration from an external JSON file
     $configFile = 'wphandbook.json';
     if (!file_exists($configFile)) {
-        throw new Exception("The configuration file does not exist: " . $configFile);
+        throw new Exception("Configuration file does not exist: {$configFile}");
     }
-    
+
     $configContent = file_get_contents($configFile);
     $config = json_decode($configContent, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception("Error decoding configuration file: " . json_last_error_msg());
     }
 
-    $jsonFileUrl = $config['source_url'];
-    $wpApiUrl = $config['wordpress_domain'];
-    $username = $config['username'];
-    $applicationPassword = $config['apikey'];
+    $jsonFileUrl = $config['source_url'] ?? '';
+    $wpApiUrl = $config['wordpress_domain'] ?? '';
+    $username = $config['username'] ?? '';
+    $applicationPassword = $config['apikey'] ?? '';
 
-    echo "Reading list of files from URL: {$jsonFileUrl}\n";
+    if (empty($jsonFileUrl) || empty($wpApiUrl) || empty($username) || empty($applicationPassword)) {
+        throw new Exception("Missing required configuration parameters.");
+    }
+
+    echo "Fetching file list from URL: {$jsonFileUrl}\n";
     $fileListContent = file_get_contents($jsonFileUrl);
     if ($fileListContent === false) {
-        throw new Exception("The specified JSON file could not be fetched from the URL: " . $jsonFileUrl);
+        echo "Warning: Could not fetch the JSON file from URL: {$jsonFileUrl}\n";
+        exit;
     }
-    
+
     $fileList = json_decode($fileListContent, true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception("Error decoding JSON file: " . json_last_error_msg());
     }
 
-    // Load hash file if exists, otherwise create an empty one
+    // Load hash file if it exists, otherwise create an empty array
     $hashFile = 'wphandbook-hash.txt';
     $hashData = [];
     if (file_exists($hashFile)) {
         $hashFileContent = file($hashFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($hashFileContent as $line) {
-            list($url, $hash) = explode(',', $line);
+            [$url, $hash] = explode(',', $line, 2);
             $hashData[$url] = $hash;
         }
     }
 
-    $publisher = new MarkdownToWordPressPublisher($wpApiUrl, $username, $applicationPassword);
+    $publisher = new WPHandbookWordPressPublisher($wpApiUrl, $username, $applicationPassword);
 
-    foreach ($fileList as $item) {
-        $contentId = $item['content_id'];
-        $fileUrl = $item['file_url'];
-        $endpoint = $item['endpoint'];
+    foreach ($fileList as $key => $item) {
+        $slug = $item['slug'] ?? null;
+        $markdownUrl = $item['markdown'] ?? null;
+        $parentSlug = $item['parent'] ?? null;
+        $order = $item['order'] ?? -1;
 
-        echo "Processing file from URL: {$fileUrl}\n";
+        // Validate that slug and markdown are present and not empty
+        if (empty($slug) || empty($markdownUrl)) {
+            echo "Warning: Missing required fields (slug or markdown) in manifest entry '{$key}'. Skipping...\n";
+            continue;
+        }
 
-        // Fetch the Markdown content from GitHub URL
-        $markdownContent = file_get_contents($fileUrl);
+        echo "Processing file from URL: {$markdownUrl}\n";
+
+        // Fetch the Markdown content from the URL
+        $markdownContent = file_get_contents($markdownUrl);
         if ($markdownContent === false) {
-            echo "Warning: Could not fetch the file from URL {$fileUrl}.\n";
+            echo "Warning: Could not fetch the Markdown file from URL: {$markdownUrl}\n";
             continue;
         }
 
@@ -247,48 +302,70 @@ try {
         $currentHash = md5($markdownContent);
 
         // Check if the content has changed
-        if (isset($hashData[$fileUrl]) && $hashData[$fileUrl] === $currentHash) {
-            echo "No changes detected for URL: {$fileUrl}. Skipping update.\n";
+        if (isset($hashData[$markdownUrl]) && $hashData[$markdownUrl] === $currentHash) {
+            echo "No changes detected for URL: {$markdownUrl}. Skipping update.\n";
             continue;
         }
 
         // Publish the content if it has changed
-        $response = $publisher->publishContent($endpoint, $contentId, $markdownContent);
-        echo "Content published with ID {$contentId}: " . $response['link'] . "\n";
+        $response = $publisher->WPHandbookPublishContent('pages', $markdownContent, $slug, $parentSlug, $order);
+        echo "Content published with slug '{$slug}': " . ($response['link'] ?? 'No link provided') . "\n";
 
-        // Update the hash file
-        $hashData[$fileUrl] = $currentHash;
+        // Update the hash data
+        $hashData[$markdownUrl] = $currentHash;
     }
 
     // Save updated hashes back to the hash file
     $hashFileHandle = fopen($hashFile, 'w');
     foreach ($hashData as $url => $hash) {
-        fwrite($hashFileHandle, $url . ',' . $hash . "\n");
+        fwrite($hashFileHandle, "{$url},{$hash}\n");
     }
     fclose($hashFileHandle);
+
+    echo "Publishing process completed successfully.\n";
 
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
 }
 
-// Example of wphandbook.json content
-// {
-//     "source_url": "https://raw.githubusercontent.com/WordPress/spain-handbook/refs/heads/main/bin/handbook-manifest.json",
-//     "wordpress_domain": "https://yourwordpress.com",
-//     "username": "your_username",
-//     "apikey": "your_application_password"
-// }
+/**
+ * Example content of wphandbook.json
+ * 
+ * {
+ *     "source_url": "https://raw.githubusercontent.com/WordPress/spain-handbook/main/bin/handbook-manifest.json",
+ *     "wordpress_domain": "https://yourwordpress.com",
+ *     "username": "your_username",
+ *     "apikey": "your_application_password"
+ * }
+ */
 
-// Example of handbook manifest JSON file content
-// [
-//     {
-//         "content_id": 123,
-//         "file_url": "https://github.com/WPES/spain-handbook/blob/master/index.md",
-//         "endpoint": "posts"
-//     },
-//     {
-//         "content_id": 456,
-//         "file_url": "https://github.com/WPES/spain-handbook/blob/master/another-page.md",
-//         "endpoint": "pages"
-//     }
-// ]
+/**
+ * Example content of handbook-manifest.json
+ * 
+ * {
+ *     "index": {
+ *         "slug": "index",
+ *         "markdown": "https://github.com/WPES/spain-handbook/blob/master/index.md",
+ *         "parent": null,
+ *         "order": 0
+ *     },
+ *     "manuales": {
+ *         "slug": "manuales",
+ *         "markdown": "https://github.com/WordPress/spain-handbook/blob/master/manuales/index.md",
+ *         "parent": null,
+ *         "order": 1
+ *     },
+ *     "manuales/wordpress": {
+ *         "slug": "wordpress",
+ *         "markdown": "https://github.com/WordPress/spain-handbook/blob/master/manuales/wordpress/index.md",
+ *         "parent": "manuales",
+ *         "order": 1
+ *     },
+ *     "manuales/otro": {
+ *         "slug": "otro",
+ *         "markdown": "https://github.com/WordPress/spain-handbook/blob/master/manuales/otro/index.md",
+ *         "parent": "manuales",
+ *         "order": 2
+ *     }
+ * }
+ */
