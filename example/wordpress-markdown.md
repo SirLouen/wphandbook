@@ -203,14 +203,3 @@ Usually is not needed. A Code block shold be fine.
 ```markdown
 [html]<abbr title="World Wide Web Consortium">W3C</abbr>[/html]
 ```
-
-## Other helpers
-
-### Arrows
-
-- →
-- ←
-- ↑
-- ↓
-- ↔
-- ↕

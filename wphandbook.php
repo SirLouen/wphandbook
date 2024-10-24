@@ -45,7 +45,6 @@ class MarkdownToPHPConverter
      *
      * @param string $filePath The path to the Markdown file.
      * @return string The converted HTML content.
-     * @throws Exception If the specified file does not exist.
      */
     public function convertFile($filePath)
     {
@@ -72,7 +71,7 @@ class MarkdownToPHPConverter
         $title = array_shift($lines);
         $content = implode("\n", $lines);
         return [
-            'title' => trim($title, "# "),
+            'title' => !empty($title) ? trim($title, "# ") : "",
             'content' => $this->convert($content)
         ];
     }
@@ -137,8 +136,8 @@ class MarkdownToWordPressPublisher
         $data = $this->converter->splitTitleAndContent($markdownContent);
 
         $response = $this->sendRequest("{$endpoint}/{$contentId}", [
-            'title' => $data['title'],
-            'content' => $data['content'],
+            'title' => $data['title'] ?? "",
+            'content' => $data['content'] ?? "",
             'slug' => $slug
         ], 'POST');
 
@@ -203,10 +202,14 @@ try {
         throw new Exception("Error decoding configuration file: " . json_last_error_msg());
     }
 
-    $jsonFileUrl = $config['source_url'];
-    $wpApiUrl = $config['wordpress_domain'];
-    $username = $config['username'];
-    $applicationPassword = $config['apikey'];
+    $jsonFileUrl = $config['source_url'] ?? '';
+    $wpApiUrl = $config['wordpress_domain'] ?? '';
+    $username = $config['username'] ?? '';
+    $applicationPassword = $config['apikey'] ?? '';
+
+    if (empty($jsonFileUrl) || empty($wpApiUrl) || empty($username) || empty($applicationPassword)) {
+        throw new Exception("Missing required configuration parameters.");
+    }
 
     echo "Reading list of files from URL: {$jsonFileUrl}\n";
     $fileListContent = file_get_contents($jsonFileUrl);
@@ -234,10 +237,15 @@ try {
     $publisher = new MarkdownToWordPressPublisher($wpApiUrl, $username, $applicationPassword);
 
     foreach ($fileList as $item) {
-        $contentId = $item['content_id'];
-        $fileUrl = $item['file_url'];
-        $endpoint = $item['endpoint'];
-        $slug = $item['slug'];
+        $contentId = $item['content_id'] ?? null;
+        $fileUrl = $item['file_url'] ?? null;
+        $endpoint = $item['endpoint'] ?? null;
+        $slug = $item['slug'] ?? null;
+
+        if (empty($contentId) || empty($fileUrl) || empty($endpoint) || empty($slug)) {
+            echo "Warning: Missing required fields in manifest for one of the entries. Skipping...\n";
+            continue;
+        }
 
         echo "Processing file from URL: {$fileUrl}\n";
 
@@ -259,7 +267,7 @@ try {
 
         // Publish the content if it has changed
         $response = $publisher->publishContent($endpoint, $contentId, $markdownContent, $slug);
-        echo "Content published with ID {$contentId}: " . $response['link'] . "\n";
+        echo "Content published with ID {$contentId}: " . ($response['link'] ?? 'No link provided') . "\n";
 
         // Update the hash file
         $hashData[$fileUrl] = $currentHash;
