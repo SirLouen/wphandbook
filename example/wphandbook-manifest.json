@@ -2,11 +2,13 @@
   {
     "content_id": 264,
     "file_url": "https://raw.githubusercontent.com/javiercasares/wphandbook/refs/heads/main/example/el-quijote-1.md",
-    "endpoint": "posts"
+    "endpoint": "posts",
+    "slug": "el-quijote-1"
   },
   {
     "content_id": 266,
     "file_url": "https://raw.githubusercontent.com/javiercasares/wphandbook/refs/heads/main/example/wordpress-markdown.md",
-    "endpoint": "pages"
+    "endpoint": "pages",
+    "slug": "wordpress-markdown"
   }
 ]

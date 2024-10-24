@@ -51,7 +51,8 @@ class MarkdownToPHPConverter
     {
         echo "Reading Markdown file: {$filePath}\n";
         if (!file_exists($filePath)) {
-            throw new Exception("The specified file does not exist: " . $filePath);
+            echo "Warning: The specified file does not exist: {$filePath}\n";
+            return "";
         }
         
         $markdownContent = file_get_contents($filePath);
@@ -126,17 +127,19 @@ class MarkdownToWordPressPublisher
      * @param string $endpoint The WordPress endpoint (e.g., posts, pages).
      * @param int $contentId The ID of the content to be updated.
      * @param string $markdownContent The Markdown content to be published.
+     * @param string $slug The slug for the WordPress post or page.
      * @return array The response from the WordPress API.
      * @throws Exception If the request to the WordPress API fails.
      */
-    public function publishContent($endpoint, $contentId, $markdownContent)
+    public function publishContent($endpoint, $contentId, $markdownContent, $slug)
     {
         echo "Publishing content with ID: {$contentId}\n";
         $data = $this->converter->splitTitleAndContent($markdownContent);
 
         $response = $this->sendRequest("{$endpoint}/{$contentId}", [
             'title' => $data['title'],
-            'content' => $data['content']
+            'content' => $data['content'],
+            'slug' => $slug
         ], 'POST');
 
         return $response;
@@ -208,7 +211,8 @@ try {
     echo "Reading list of files from URL: {$jsonFileUrl}\n";
     $fileListContent = file_get_contents($jsonFileUrl);
     if ($fileListContent === false) {
-        throw new Exception("The specified JSON file could not be fetched from the URL: " . $jsonFileUrl);
+        echo "Warning: The specified JSON file could not be fetched from the URL: {$jsonFileUrl}\n";
+        exit;
     }
     
     $fileList = json_decode($fileListContent, true);
@@ -233,6 +237,7 @@ try {
         $contentId = $item['content_id'];
         $fileUrl = $item['file_url'];
         $endpoint = $item['endpoint'];
+        $slug = $item['slug'];
 
         echo "Processing file from URL: {$fileUrl}\n";
 
@@ -253,7 +258,7 @@ try {
         }
 
         // Publish the content if it has changed
-        $response = $publisher->publishContent($endpoint, $contentId, $markdownContent);
+        $response = $publisher->publishContent($endpoint, $contentId, $markdownContent, $slug);
         echo "Content published with ID {$contentId}: " . $response['link'] . "\n";
 
         // Update the hash file
@@ -284,11 +289,15 @@ try {
 //     {
 //         "content_id": 123,
 //         "file_url": "https://github.com/WPES/spain-handbook/blob/master/index.md",
-//         "endpoint": "posts"
+//         "endpoint": "posts",
+//         "slug": "spain-handbook"
 //     },
 //     {
 //         "content_id": 456,
 //         "file_url": "https://github.com/WPES/spain-handbook/blob/master/another-page.md",
-//         "endpoint": "pages"
+//         "endpoint": "pages",
+//         "slug": "another-page"
 //     }
 // ]
+
+?>
