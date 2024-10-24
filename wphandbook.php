@@ -281,7 +281,7 @@ try {
         $slug = $item['slug'] ?? null;
         $markdownUrl = $item['markdown'] ?? null;
         $parentSlug = $item['parent'] ?? null;
-        $order = $item['order'] ?? -1;
+        $order = $item['order'] ?? 0;
 
         // Validate that slug and markdown are present and not empty
         if (empty($slug) || empty($markdownUrl)) {
