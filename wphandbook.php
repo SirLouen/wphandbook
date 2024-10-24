@@ -52,7 +52,7 @@ class MarkdownConverter
         echo "Splitting title and content from Markdown...\n";
         $lines = explode("\n", $markdownContent);
         $titleLine = array_shift($lines);
-        $title = !empty($titleLine) ? trim($titleLine, "# ") : "Untitled";
+        $title = (!empty($titleLine)) ? trim($titleLine, "# ") : "Untitled";
         $content = implode("\n", $lines);
 
         return [
@@ -109,9 +109,9 @@ class WordPressPublisher
 
         // Get parent ID if parentSlug is provided
         $parentId = 0;
-        if ($parentSlug !== null) {
+        if (null !== $parentSlug) {
             $parentId = $this->getPageIdBySlug($parentSlug) ?? 0;
-            if ($parentId === 0) {
+            if (0 === $parentId) {
                 echo "Warning: Parent page with slug '{$parentSlug}' not found. Publishing without a parent.\n";
             }
         }
@@ -176,7 +176,7 @@ class WordPressPublisher
 
         if (!empty($data)) {
             $jsonData = json_encode($data);
-            if ($jsonData === false) {
+            if (false === $jsonData) {
                 throw new Exception("Error encoding JSON data: " . json_last_error_msg());
             }
             $options[CURLOPT_POSTFIELDS] = $jsonData;
@@ -249,13 +249,13 @@ try {
 
     // Load configuration from an external JSON file
     $configFile = 'wphandbook.json';
-    if (!file_exists($configFile)) {
+    if (true === !file_exists($configFile)) {
         throw new Exception("Configuration file does not exist: {$configFile}");
     }
 
     $configContent = file_get_contents($configFile);
     $config = json_decode($configContent, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
+    if (true === (json_last_error() !== JSON_ERROR_NONE)) {
         throw new Exception("Error decoding configuration file: " . json_last_error_msg());
     }
 
@@ -264,26 +264,26 @@ try {
     $username = $config['username'] ?? '';
     $applicationPassword = $config['apikey'] ?? '';
 
-    if (empty($jsonFileUrl) || empty($wpApiUrl) || empty($username) || empty($applicationPassword)) {
+    if (true === (empty($jsonFileUrl) || empty($wpApiUrl) || empty($username) || empty($applicationPassword))) {
         throw new Exception("Missing required configuration parameters.");
     }
 
     echo "Fetching file list from URL: {$jsonFileUrl}\n";
     $fileListContent = file_get_contents($jsonFileUrl);
-    if ($fileListContent === false) {
+    if (false === $fileListContent) {
         echo "Warning: Could not fetch the JSON file from URL: {$jsonFileUrl}\n";
         exit;
     }
 
     $fileList = json_decode($fileListContent, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
+    if (true === (json_last_error() !== JSON_ERROR_NONE)) {
         throw new Exception("Error decoding JSON file: " . json_last_error_msg());
     }
 
     // Load hash file if it exists, otherwise create an empty array
     $hashFile = 'wphandbook-hash.txt';
     $hashData = [];
-    if (file_exists($hashFile)) {
+    if (true === file_exists($hashFile)) {
         $hashFileContent = file($hashFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($hashFileContent as $line) {
             [$url, $hash] = explode(',', $line, 2);
@@ -293,6 +293,11 @@ try {
 
     $publisher = new WordPressPublisher($wpApiUrl, $username, $applicationPassword);
 
+    // Sort the manifest to ensure parents are processed before children
+    uksort($fileList, function ($a, $b) {
+        return substr_count($a, '/') <=> substr_count($b, '/');
+    });
+
     foreach ($fileList as $key => $item) {
         $slug = $item['slug'] ?? null;
         $markdownUrl = $item['markdown'] ?? null;
@@ -300,7 +305,7 @@ try {
         $order = $item['order'] ?? -1;
 
         // Validate that slug and markdown are present and not empty
-        if (empty($slug) || empty($markdownUrl)) {
+        if (true === (empty($slug) || empty($markdownUrl))) {
             echo "Warning: Missing required fields (slug or markdown) in manifest entry '{$key}'. Skipping...\n";
             continue;
         }
@@ -309,7 +314,7 @@ try {
 
         // Fetch the Markdown content from the URL
         $markdownContent = file_get_contents($markdownUrl);
-        if ($markdownContent === false) {
+        if (false === $markdownContent) {
             echo "Warning: Could not fetch the Markdown file from URL: {$markdownUrl}\n";
             continue;
         }
@@ -343,10 +348,4 @@ try {
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
 }
-
-/**
- * Example content of wphandbook.json
- * 
- * {
- *     "source_url": "https://raw.githubusercontent.com/javiercasares/wphandbook/refs/heads/main/example/handbook-manifest.json",
- *     "wordpress_domain": "https://yourwordpress
+?>
