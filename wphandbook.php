@@ -128,7 +128,7 @@ class WordPressPublisher
                 'parent' => $parentId,
                 'menu_order' => $order,
                 'status' => 'publish' // Ensure the page is published
-            ], 'POST');
+            ], 'PATCH'); // Use PATCH for updates
             echo "Page updated: " . ($response['link'] ?? 'No link provided') . "\n";
         } else {
             echo "Creating new page with slug: {$slug}\n";
@@ -139,7 +139,7 @@ class WordPressPublisher
                 'parent' => $parentId,
                 'menu_order' => $order,
                 'status' => 'publish' // Ensure the page is published
-            ], 'POST');
+            ], 'POST'); // Use POST for creation
             echo "Page created: " . ($response['link'] ?? 'No link provided') . "\n";
         }
 
@@ -151,7 +151,7 @@ class WordPressPublisher
      *
      * @param string $endpoint The API endpoint to send the request to.
      * @param array $data The data to send in the request.
-     * @param string $method The HTTP method to use (default is 'POST').
+     * @param string $method The HTTP method to use ('POST' or 'PATCH').
      * @return array The response from the WordPress API.
      * @throws Exception If the CURL request fails or returns an error response.
      */
@@ -169,11 +169,18 @@ class WordPressPublisher
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_USERPWD => "{$this->username}:{$this->applicationPassword}"
+            CURLOPT_USERPWD => "{$this->username}:{$this->applicationPassword}",
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true
         ];
 
         if (!empty($data)) {
-            $options[CURLOPT_POSTFIELDS] = json_encode($data);
+            $jsonData = json_encode($data);
+            if ($jsonData === false) {
+                throw new Exception("Error encoding JSON data: " . json_last_error_msg());
+            }
+            $options[CURLOPT_POSTFIELDS] = $jsonData;
+            echo "Request Data: {$jsonData}\n"; // For debugging
         }
 
         curl_setopt_array($ch, $options);
@@ -341,41 +348,5 @@ try {
  * Example content of wphandbook.json
  * 
  * {
- *     "source_url": "https://raw.githubusercontent.com/WordPress/spain-handbook/main/bin/handbook-manifest.json",
- *     "wordpress_domain": "https://yourwordpress.com",
- *     "username": "your_username",
- *     "apikey": "your_application_password"
- * }
- */
-
-/**
- * Example content of handbook-manifest.json
- * 
- * {
- *     "index": {
- *         "slug": "index",
- *         "markdown": "https://github.com/WPES/spain-handbook/blob/master/index.md",
- *         "parent": null,
- *         "order": 0
- *     },
- *     "manuales": {
- *         "slug": "manuales",
- *         "markdown": "https://github.com/WordPress/spain-handbook/blob/master/manuales/index.md",
- *         "parent": null,
- *         "order": 1
- *     },
- *     "manuales/wordpress": {
- *         "slug": "wordpress",
- *         "markdown": "https://github.com/WordPress/spain-handbook/blob/master/manuales/wordpress/index.md",
- *         "parent": "manuales",
- *         "order": 1
- *     },
- *     "manuales/otro": {
- *         "slug": "otro",
- *         "markdown": "https://github.com/WordPress/spain-handbook/blob/master/manuales/otro/index.md",
- *         "parent": "manuales",
- *         "order": 2
- *     }
- * }
- */
-?>
+ *     "source_url": "https://raw.githubusercontent.com/javiercasares/wphandbook/refs/heads/main/example/handbook-manifest.json",
+ *     "wordpress_domain": "https://yourwordpress
