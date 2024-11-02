@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare( strict_types=1 );
 
 namespace WPHandbook;
 
@@ -16,15 +16,13 @@ use Exception;
  * 
  * Converts Markdown content to HTML using the Parsedown library.
  */
-class MarkdownConverter
-{
+class MarkdownConverter {
     private Parsedown $parsedown;
 
     /**
      * Initializes the Parsedown instance.
      */
-    public function __construct()
-    {
+    public function __construct() {
         echo "Initializing MarkdownConverter...\n";
         $this->parsedown = new Parsedown();
     }
@@ -35,10 +33,9 @@ class MarkdownConverter
      * @param string $markdownContent The Markdown content to convert.
      * @return string The converted HTML content.
      */
-    public function convertMarkdownToHTML(string $markdownContent): string
-    {
+    public function convertMarkdownToHTML(string $markdownContent): string {
         echo "Converting Markdown to HTML...\n";
-        return $this->parsedown->text($markdownContent);
+        return $this->parsedown->text( $markdownContent );
     }
 
     /**
@@ -47,17 +44,15 @@ class MarkdownConverter
      * @param string $markdownContent The Markdown content to split.
      * @return array{title: string, content: string} An associative array with 'title' and 'content'.
      */
-    public function splitTitleAndContent(string $markdownContent): array
-    {
+    public function splitTitleAndContent(string $markdownContent): array {
         echo "Splitting title and content from Markdown...\n";
-        $lines = explode("\n", $markdownContent);
-        $titleLine = array_shift($lines);
-        $title = (!empty($titleLine)) ? trim($titleLine, "# ") : "Untitled";
-        $content = implode("\n", $lines);
-
+        $lines = explode( "\n", $markdownContent );
+        $titleLine = array_shift( $lines );
+        $title = ( ! empty( $titleLine ) ) ? trim( $titleLine, "# " ) : "Untitled";
+        $content = implode( "\n", $lines );
         return [
             'title' => $title,
-            'content' => $this->convertMarkdownToHTML($content)
+            'content' => $this->convertMarkdownToHTML( $content )
         ];
     }
 }
@@ -67,8 +62,7 @@ class MarkdownConverter
  * 
  * Publishes Markdown content to a WordPress site using the REST API.
  */
-class WordPressPublisher
-{
+class WordPressPublisher {
     private MarkdownConverter $converter;
     private string $wpApiUrl;
     private string $username;
@@ -82,11 +76,10 @@ class WordPressPublisher
      * @param string $username Username for authentication.
      * @param string $applicationPassword Application password for authentication.
      */
-    public function __construct(string $wpApiUrl, string $username, string $applicationPassword)
-    {
+    public function __construct( string $wpApiUrl, string $username, string $applicationPassword ) {
         echo "Initializing WordPressPublisher...\n";
         $this->converter = new MarkdownConverter();
-        $this->wpApiUrl = rtrim($wpApiUrl, '/') . '/wp-json/wp/v2/';
+        $this->wpApiUrl = rtrim( $wpApiUrl, '/' ) . '/wp-json/wp/v2/';
         $this->username = $username;
         $this->applicationPassword = $applicationPassword;
     }
@@ -102,23 +95,20 @@ class WordPressPublisher
      * @return array The response from the WordPress API.
      * @throws Exception If the API request fails.
      */
-    public function publishContent(string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = 0): array
-    {
+    public function publishContent( string $endpoint, string $markdownContent, string $slug, ?string $parentSlug = null, int $order = 0 ): array {
         echo "Publishing content with slug: {$slug}\n";
-        $data = $this->converter->splitTitleAndContent($markdownContent);
-
+        $data = $this->converter->splitTitleAndContent( $markdownContent );
         // Get parent ID if parentSlug is provided
         $parentId = 0;
-        if (null !== $parentSlug) {
-            $parentId = $this->getPageIdBySlug($parentSlug) ?? 0;
-            if (0 === $parentId) {
+        if ( null !== $parentSlug ) {
+            $parentId = $this->getPageIdBySlug( $parentSlug ) ?? 0;
+            if ( 0 === $parentId ) {
                 echo "Warning: Parent page with slug '{$parentSlug}' not found. Publishing without a parent.\n";
             }
         }
-
         // Check if the page already exists
-        $existingPage = $this->getPageBySlug($slug);
-        if ($existingPage) {
+        $existingPage = $this->getPageBySlug( $slug );
+        if ( $existingPage ) {
             $pageId = $existingPage['id'];
             echo "Existing page found with ID: {$pageId}. Updating...\n";
             $response = $this->sendRequest("{$endpoint}/{$pageId}", [
@@ -127,9 +117,9 @@ class WordPressPublisher
                 'slug' => $slug,
                 'parent' => $parentId,
                 'menu_order' => $order,
-                'status' => 'publish' // Ensure the page is published
-            ], 'POST'); // Use POST for updates
-            echo "Page updated: " . ($response['link'] ?? 'No link provided') . "\n";
+                'status' => 'publish'
+            ], 'POST');
+            echo "Page updated: " . ( $response['link'] ?? 'No link provided' ) . "\n";
         } else {
             echo "Creating new page with slug: {$slug}\n";
             $response = $this->sendRequest("{$endpoint}", [
@@ -138,14 +128,12 @@ class WordPressPublisher
                 'slug' => $slug,
                 'parent' => $parentId,
                 'menu_order' => $order,
-                'status' => 'publish' // Ensure the page is published
-            ], 'POST'); // Use POST for creation
-            echo "Page created: " . ($response['link'] ?? 'No link provided') . "\n";
+                'status' => 'publish'
+            ], 'POST');
+            echo "Page created: " . ( $response['link'] ?? 'No link provided' ) . "\n";
         }
-
         // Update slug to ID map
         $this->slugToIdMap[$slug] = $response['id'] ?? null;
-
         return $response;
     }
 
@@ -158,17 +146,14 @@ class WordPressPublisher
      * @return array The response from the WordPress API.
      * @throws Exception If the CURL request fails or returns an error response.
      */
-    private function sendRequest(string $endpoint, array $data = [], string $method = 'GET'): array
-    {
+    private function sendRequest( string $endpoint, array $data = [], string $method = 'GET' ): array {
         $url = $this->wpApiUrl . $endpoint;
         echo "Sending request to WordPress API: {$url}\n";
-
-        $ch = curl_init($url);
+        $ch = curl_init( $url );
         $headers = [
             'Content-Type: application/json',
-            'Authorization: Basic ' . base64_encode("{$this->username}:{$this->applicationPassword}")
+            'Authorization: Basic ' . base64_encode( "{$this->username}:{$this->applicationPassword}" )
         ];
-
         $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
@@ -176,34 +161,27 @@ class WordPressPublisher
             CURLOPT_TIMEOUT => 30,
             CURLOPT_SSL_VERIFYPEER => true
         ];
-
-        if (!empty($data)) {
-            $jsonData = json_encode($data);
-            if (false === $jsonData) {
-                throw new Exception("Error encoding JSON data: " . json_last_error_msg());
+        if ( ! empty( $data ) ) {
+            $jsonData = json_encode( $data );
+            if ( false === $jsonData ) {
+                throw new Exception( "Error encoding JSON data: " . json_last_error_msg() );
             }
-            $options[CURLOPT_POSTFIELDS] = $jsonData;
+            $options[ CURLOPT_POSTFIELDS ] = $jsonData;
             echo "Request Data: {$jsonData}\n"; // For debugging
         }
-
-        curl_setopt_array($ch, $options);
-
-        $response = curl_exec($ch);
-
-        if (curl_errno($ch)) {
-            throw new Exception('CURL request error: ' . curl_error($ch));
+        curl_setopt_array( $ch, $options );
+        $response = curl_exec( $ch );
+        if ( curl_errno( $ch ) ) {
+            throw new Exception( 'CURL request error: ' . curl_error( $ch ) );
         }
-
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );
         echo "HTTP response code: {$httpCode}\n";
-        if ($httpCode >= 400) {
-            throw new Exception('API response error: ' . $response);
+        if ( $httpCode >= 400 ) {
+            throw new Exception( 'API response error: ' . $response );
         }
-
         curl_close($ch);
-
         echo "Request successful.\n";
-        return json_decode($response, true) ?? [];
+        return json_decode( $response, true ) ?? [];
     }
 
     /**
@@ -212,24 +190,20 @@ class WordPressPublisher
      * @param string $slug The slug of the page.
      * @return array|null The page data or null if not found.
      */
-    private function getPageBySlug(string $slug): ?array
-    {
+    private function getPageBySlug( string $slug ): ?array {
         // Check the cache first
-        if (isset($this->slugToIdMap[$slug])) {
-            return ['id' => $this->slugToIdMap[$slug]];
+        if ( isset( $this->slugToIdMap[$slug] ) ) {
+            return [ 'id' => $this->slugToIdMap[ $slug ] ];
         }
-
         // Query the API for the page
         $endpoint = "pages?slug={$slug}&per_page=1&status=any";
         echo "Searching for existing page with slug: {$slug}\n";
-        $response = $this->sendRequest($endpoint, [], 'GET');
-
-        if (!empty($response) && is_array($response)) {
-            $page = $response[0];
-            $this->slugToIdMap[$slug] = $page['id'];
+        $response = $this->sendRequest( $endpoint, [], 'GET' );
+        if ( ! empty( $response ) && is_array( $response ) ) {
+            $page = $response[ 0 ];
+            $this->slugToIdMap[ $slug ] = $page[ 'id' ];
             return $page;
         }
-
         return null;
     }
 
@@ -239,118 +213,90 @@ class WordPressPublisher
      * @param string $slug The slug of the page.
      * @return int|null The page ID or null if not found.
      */
-    private function getPageIdBySlug(string $slug): ?int
-    {
-        $page = $this->getPageBySlug($slug);
-        return $page['id'] ?? null;
+    private function getPageIdBySlug( string $slug ): ?int {
+        $page = $this->getPageBySlug( $slug );
+        return $page[ 'id' ] ?? null;
     }
 }
 
-// Example Usage
 try {
     echo "Starting the publishing process...\n";
-
     // Load configuration from an external JSON file
     $configFile = 'wphandbook.json';
-    if (true === !file_exists($configFile)) {
-        throw new Exception("Configuration file does not exist: {$configFile}");
+    if ( true === ! file_exists( $configFile ) ) {
+        throw new Exception( "Configuration file does not exist: {$configFile}" );
     }
-
-    $configContent = file_get_contents($configFile);
-    $config = json_decode($configContent, true);
-    if (true === (json_last_error() !== JSON_ERROR_NONE)) {
-        throw new Exception("Error decoding configuration file: " . json_last_error_msg());
+    $configContent = file_get_contents( $configFile );
+    $config = json_decode( $configContent, true );
+    if ( true === ( json_last_error() !== JSON_ERROR_NONE ) ) {
+        throw new Exception( "Error decoding configuration file: " . json_last_error_msg() );
     }
-
     $jsonFileUrl = $config['source_url'] ?? '';
     $wpApiUrl = $config['wordpress_domain'] ?? '';
+    $wpType = $config['wordpress_type'] ?? '';
     $username = $config['username'] ?? '';
     $applicationPassword = $config['apikey'] ?? '';
-
-    if (true === (empty($jsonFileUrl) || empty($wpApiUrl) || empty($username) || empty($applicationPassword))) {
-        throw new Exception("Missing required configuration parameters.");
+    if ( true === ( empty( $jsonFileUrl ) || empty( $wpApiUrl ) || empty( $wpType ) || empty( $username ) || empty( $applicationPassword ) ) ) {
+        throw new Exception( "Missing required configuration parameters." );
     }
-
     echo "Fetching file list from URL: {$jsonFileUrl}\n";
-    $fileListContent = file_get_contents($jsonFileUrl);
-    if (false === $fileListContent) {
+    $fileListContent = file_get_contents( $jsonFileUrl );
+    if ( false === $fileListContent ) {
         echo "Warning: Could not fetch the JSON file from URL: {$jsonFileUrl}\n";
         exit;
     }
-
-    $fileList = json_decode($fileListContent, true);
-    if (true === (json_last_error() !== JSON_ERROR_NONE)) {
-        throw new Exception("Error decoding JSON file: " . json_last_error_msg());
+    $fileList = json_decode( $fileListContent, true );
+    if ( true === ( json_last_error() !== JSON_ERROR_NONE ) ) {
+        throw new Exception( "Error decoding JSON file: " . json_last_error_msg() );
     }
-
     // Load hash file if it exists, otherwise create an empty array
     $hashFile = 'wphandbook-hash.txt';
     $hashData = [];
-    if (true === file_exists($hashFile)) {
-        $hashFileContent = file($hashFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($hashFileContent as $line) {
-            [$url, $hash] = explode(',', $line, 2);
-            $hashData[$url] = $hash;
+    if ( true === file_exists( $hashFile ) ) {
+        $hashFileContent = file( $hashFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+        foreach ( $hashFileContent as $line ) {
+            [ $url, $hash ] = explode( ',', $line, 2 );
+            $hashData[ $url ] = $hash;
         }
     }
-
-    $publisher = new WordPressPublisher($wpApiUrl, $username, $applicationPassword);
-
-    // Sort the manifest to ensure parents are processed before children
-    /*
-    uksort($fileList, function ($a, $b) {
-        return substr_count($a, '/') <=> substr_count($b, '/');
-    });
-    */
-
-    foreach ($fileList as $key => $item) {
+    $publisher = new WordPressPublisher( $wpApiUrl, $username, $applicationPassword );
+    foreach ( $fileList as $key => $item ) {
         $slug = $item['slug'] ?? null;
         $markdownUrl = $item['markdown'] ?? null;
         $parentSlug = $item['parent'] ?? null;
         $order = $item['order'] ?? 0;
-
         // Validate that slug and markdown are present and not empty
-        if (true === (empty($slug) || empty($markdownUrl))) {
+        if ( true === ( empty( $slug ) || empty( $markdownUrl ) ) ) {
             echo "Warning: Missing required fields (slug or markdown) in manifest entry '{$key}'. Skipping...\n";
             continue;
         }
-
         echo "Processing file from URL: {$markdownUrl}\n";
-
         // Fetch the Markdown content from the URL
-        $markdownContent = file_get_contents($markdownUrl);
-        if (false === $markdownContent) {
+        $markdownContent = file_get_contents( $markdownUrl );
+        if ( false === $markdownContent ) {
             echo "Warning: Could not fetch the Markdown file from URL: {$markdownUrl}\n";
             continue;
         }
-
         // Generate hash of the current content
-        $currentHash = md5($markdownContent);
-
+        $currentHash = md5( $markdownContent );
         // Check if the content has changed
-        if (isset($hashData[$markdownUrl]) && $hashData[$markdownUrl] === $currentHash) {
+        if ( isset( $hashData[ $markdownUrl ] ) && $hashData[ $markdownUrl ] === $currentHash ) {
             echo "No changes detected for URL: {$markdownUrl}. Skipping update.\n";
             continue;
         }
-
         // Publish the content if it has changed
-        $response = $publisher->publishContent('pages', $markdownContent, $slug, $parentSlug, $order);
-        echo "Content published with slug '{$slug}': " . ($response['link'] ?? 'No link provided') . "\n";
-
+        $response = $publisher->publishContent( $wpType , $markdownContent, $slug, $parentSlug, $order );
+        echo "Content published with slug '{$slug}': " . ( $response['link'] ?? 'No link provided' ) . "\n";
         // Update the hash data
-        $hashData[$markdownUrl] = $currentHash;
+        $hashData[ $markdownUrl ] = $currentHash;
     }
-
     // Save updated hashes back to the hash file
-    $hashFileHandle = fopen($hashFile, 'w');
-    foreach ($hashData as $url => $hash) {
-        fwrite($hashFileHandle, "{$url},{$hash}\n");
+    $hashFileHandle = fopen( $hashFile, 'w' );
+    foreach ( $hashData as $url => $hash ) {
+        fwrite( $hashFileHandle, "{$url},{$hash}\n" );
     }
-    fclose($hashFileHandle);
-
+    fclose( $hashFileHandle );
     echo "Publishing process completed successfully.\n";
-
-} catch (Exception $e) {
+} catch ( Exception $e ) {
     echo "Error: " . $e->getMessage() . "\n";
 }
-?>

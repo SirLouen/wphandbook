@@ -1,6 +1,7 @@
 {
   "source_url": "https://github.com/javiercasares/wphandbook/refs/heads/main/example/wphandbook-manifest.json",
   "wordpress_domain": "https://example.com",
+  "wordpress_type": "handbook",
   "username": "your_username",
   "apikey": "your_application_password"
 }
