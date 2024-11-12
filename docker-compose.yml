@@ -1,5 +1,13 @@
 services:
   handbook:
+    container_name: handbook
     build:
       context: .
       dockerfile: Dockerfile
+    networks:
+      - frontend
+
+networks:
+  frontend:
+    external: true
+    name: frontend
