@@ -233,10 +233,10 @@ try {
     }
     $jsonFileUrl = $config['source_url'] ?? '';
     $wpApiUrl = $config['wordpress_domain'] ?? '';
-    $wpType = $config['wordpress_type'] ?? '';
+    $wpCPT = $config['wordpress_cpt'] ?? '';
     $username = $config['username'] ?? '';
     $applicationPassword = $config['apikey'] ?? '';
-    if ( true === ( empty( $jsonFileUrl ) || empty( $wpApiUrl ) || empty( $wpType ) || empty( $username ) || empty( $applicationPassword ) ) ) {
+    if ( true === ( empty( $jsonFileUrl ) || empty( $wpApiUrl ) || empty( $wpCPT ) || empty( $username ) || empty( $applicationPassword ) ) ) {
         throw new Exception( "Missing required configuration parameters." );
     }
     echo "Fetching file list from URL: {$jsonFileUrl}\n";
@@ -285,7 +285,7 @@ try {
             continue;
         }
         // Publish the content if it has changed
-        $response = $publisher->publishContent( $wpType , $markdownContent, $slug, $parentSlug, $order );
+        $response = $publisher->publishContent( $wpCPT , $markdownContent, $slug, $parentSlug, $order );
         echo "Content published with slug '{$slug}': " . ( $response['link'] ?? 'No link provided' ) . "\n";
         // Update the hash data
         $hashData[ $markdownUrl ] = $currentHash;
