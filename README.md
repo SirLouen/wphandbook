@@ -5,8 +5,9 @@ How to set up for testing locally (or remotely):
 
 ## 1. Create a full Wordpress instance container locally with Docker:
 
-(docker-compose.yml)[https://gist.github.com/SirLouen/73addf6bbc14833cf16074938d8548bb#file-docker-compose-yml]
-You will need this (wordpress.env)[https://gist.github.com/SirLouen/3e0f87c50362d35a621cca6812f5973c#file-wordpress-env] file to setup the Wordpress instance, you can edit DB_USER, DB_PASSWORD, DB_NAME, to your liking
+[docker-compose.yml](https://gist.github.com/SirLouen/73addf6bbc14833cf16074938d8548bb#file-docker-compose-yml)
+
+You will need this [wordpress.env](https://gist.github.com/SirLouen/3e0f87c50362d35a621cca6812f5973c#file-wordpress-env) file to setup the Wordpress instance, you can edit DB_USER, DB_PASSWORD, DB_NAME, to your liking
 
 Then run `docker-compose up -d` in the same directory as the `docker-compose.yml` 
 
